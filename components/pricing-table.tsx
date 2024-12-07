@@ -14,6 +14,8 @@ import {
 import { handleCheckout } from "@/app/actions/checkout"
 import { toast } from "@/components/ui/use-toast"
 import { ContactFormModal } from "./contact-form-modal"
+import { BankTransferModal } from "./bank-transfer-modal"
+import Image from "next/image"
 
 interface Package {
   name: string
@@ -22,6 +24,7 @@ interface Package {
   revisions: number
   deliveryDays: number
   description: string
+  thumbnail: string
 }
 
 const packages: Package[] = [
@@ -32,6 +35,7 @@ const packages: Package[] = [
     revisions: 2,
     deliveryDays: 30,
     description: "A 60-sec video combined with animation, screen recordings, and/or stock footage.",
+    thumbnail: "https://res.cloudinary.com/diex8siap/image/upload/v1733491474/Video-Sasshttps:/www.hubspot.com/hs-fs/hubfs/video.jpg"
   },
   {
     name: "Standard",
@@ -40,6 +44,7 @@ const packages: Package[] = [
     revisions: 3,
     deliveryDays: 45,
     description: "A 90-sec video combined with animation, screen recordings, and/or stock footage.",
+    thumbnail: "https://res.cloudinary.com/diex8siap/image/upload/v1733491641/Screenshot_2024-12-06_at_13.27.04_jvizfw.png"
   },
   {
     name: "Premium",
@@ -48,12 +53,14 @@ const packages: Package[] = [
     revisions: 4,
     deliveryDays: 60,
     description: "A 120-sec video combined with animation, screen recordings, and/or stock footage.",
+    thumbnail: "https://res.cloudinary.com/diex8siap/image/upload/v1733491658/Screenshot_2024-12-06_at_13.27.28_artxjn.png"
   },
 ]
 
 export default function PricingTable() {
   const [selectedPackage, setSelectedPackage] = useState<Package>(packages[0])
-  const [isLoading, setIsLoading] = useState(false)
+  const [loadingStates, setLoadingStates] = useState<{ [key: string]: boolean }>({})
+  const [isBankTransferModalOpen, setIsBankTransferModalOpen] = useState(false)
 
   useEffect(() => {
     const keepAlive = () => {
@@ -65,11 +72,11 @@ export default function PricingTable() {
     return () => clearInterval(interval)
   }, [])
 
-  const onCheckout = async () => {
-    setIsLoading(true)
+  const onCheckout = async (pkg: Package) => {
+    setLoadingStates(prev => ({ ...prev, [pkg.name]: true }))
     try {
       console.log('Starting checkout process')
-      const result = await handleCheckout(selectedPackage)
+      const result = await handleCheckout(pkg)
       console.log('Checkout result:', result)
       if (result.success && result.url) {
         window.location.href = result.url
@@ -84,32 +91,41 @@ export default function PricingTable() {
         variant: "destructive",
       })
     } finally {
-      setIsLoading(false)
+      setLoadingStates(prev => ({ ...prev, [pkg.name]: false }))
     }
   }
 
   return (
     <div className="container mx-auto p-4 md:p-6">
-      <div className="grid lg:grid-cols-[1fr_400px] gap-6">
-        <div className="grid gap-6">
-          <div className="grid md:grid-cols-3 gap-6">
+      <h1 className="text-4xl font-bold text-center py-2 tracking-tight text-black">
+        Promo Videos
+      </h1>
+      <div className="grid lg:grid-cols-[1fr_300px] gap-2">
+        <div className="grid gap-0">
+          <div className="grid md:grid-cols-3 gap-4">
             {packages.map((pkg) => (
               <Card
                 key={pkg.name}
-                className={`relative ${
-                  selectedPackage.name === pkg.name ? "border-primary" : ""
-                }`}
+                className="relative flex flex-col"
               >
-                <CardHeader>
+                <CardHeader className="flex">
+                  <div className="relative w-full h-40">
+                    <Image
+                      src={pkg.thumbnail}
+                      alt={`${pkg.name} package thumbnail`}
+                      layout="fill"
+                      objectFit="cover"
+                      className="rounded-t-lg"
+                    />
+                  </div>
                   <CardTitle>€{pkg.price}</CardTitle>
                   <CardDescription className="text-lg font-medium">{pkg.name}</CardDescription>
                 </CardHeader>
-                <CardContent className="grid gap-4">
+                <CardContent className="grid gap-2">
                   <div className="font-medium">{`${pkg.duration}-SEC PRODUCT VIDEO`}</div>
                   <p className="text-sm text-muted-foreground">{pkg.description}</p>
                   <div className="grid gap-2">
                     {[
-                      "Characters included",
                       "Voice over recording",
                       "Storyboard",
                       "Script writing",
@@ -123,27 +139,27 @@ export default function PricingTable() {
                     ))}
                   </div>
                   <div className="grid gap-2 text-sm">
-                    <div className="flex justify-between">
+                    {/* <div className="flex justify-between">
                       <span>Running time</span>
                       <span>{pkg.duration} seconds</span>
-                    </div>
+                    </div> */}
                     <div className="flex justify-between">
                       <span>Revisions</span>
                       <span>{pkg.revisions}</span>
                     </div>
-                    <div className="flex justify-between">
+                    {/* <div className="flex justify-between">
                       <span>Delivery Time</span>
                       <span>{pkg.deliveryDays} days</span>
-                    </div>
+                    </div> */}
                   </div>
                 </CardContent>
                 <CardFooter>
                   <Button
                     className="w-full"
-                    variant={selectedPackage.name === pkg.name ? "default" : "outline"}
-                    onClick={() => setSelectedPackage(pkg)}
+                    onClick={() => onCheckout(pkg)}
+                    disabled={loadingStates[pkg.name]}
                   >
-                    {selectedPackage.name === pkg.name ? "Selected" : "Select"}
+                    {loadingStates[pkg.name] ? "Processing..." : "Buy Now"}
                   </Button>
                 </CardFooter>
               </Card>
@@ -180,7 +196,6 @@ export default function PricingTable() {
               </div>
               <div className="grid gap-2">
                 {[
-                  "Characters included",
                   "Voice over recording",
                   "Storyboard",
                   "Script writing",
@@ -193,7 +208,7 @@ export default function PricingTable() {
                   </div>
                 ))}
               </div>
-              <div className="flex items-start gap-2 rounded-lg border p-4">
+              {/* <div className="flex items-start gap-2 rounded-lg border p-4">
                 <Flag className="h-5 w-5 text-primary" />
                 <div className="grid gap-1">
                   <div className="font-medium">Milestone Payments available</div>
@@ -201,11 +216,19 @@ export default function PricingTable() {
                     Pay per milestone starting with €{(selectedPackage.price / 5).toFixed(2)}
                   </div>
                 </div>
-              </div>
+              </div> */}
             </CardContent>
             <CardFooter className="flex flex-col gap-4">
-              <Button className="w-full" size="lg" onClick={onCheckout} disabled={isLoading}>
-                {isLoading ? "Processing..." : "Continue to Checkout"}
+              <Button 
+                className="w-full" 
+                size="lg" 
+                onClick={() => onCheckout(selectedPackage)} 
+                disabled={loadingStates[selectedPackage.name]}
+              >
+                {loadingStates[selectedPackage.name] ? "Processing..." : "Buy Now"}
+              </Button>
+              <Button className="w-full" variant="outline" onClick={() => setIsBankTransferModalOpen(true)}>
+                Pay Bank Transfer
               </Button>
               <ContactFormModal />
               <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
@@ -216,6 +239,11 @@ export default function PricingTable() {
           </Card>
         </div>
       </div>
+      <BankTransferModal
+        isOpen={isBankTransferModalOpen}
+        onClose={() => setIsBankTransferModalOpen(false)}
+        packageDetails={selectedPackage}
+      />
     </div>
   )
 }
