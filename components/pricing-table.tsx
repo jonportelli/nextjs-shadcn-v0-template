@@ -34,7 +34,7 @@ const packages: Package[] = [
     duration: 60,
     revisions: 2,
     deliveryDays: 30,
-    description: "A 60-sec video combined with animation, screen recordings, and/or stock footage.",
+    description: "A 15-sec logo sting combined with animation, sound fx, music sting and logo animation",
     thumbnail: "https://res.cloudinary.com/diex8siap/image/upload/v1733491474/Video-Sasshttps:/www.hubspot.com/hs-fs/hubfs/video.jpg"
   },
   {
